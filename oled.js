@@ -100,7 +100,7 @@ Oled.prototype._initialise = function() {
 
   // write init seq commands
   for (i = 0; i < initSeqLen; i ++) {
-    this._transfer('cmd', initSeq[i]);
+    this._transfer('cmd', initSeq[i], ()=>{});
   }
 }
 
@@ -117,11 +117,11 @@ Oled.prototype._transfer = function(type, val, fn) {
 
   // send control and actual val
   // this.board.io.i2cWrite(this.ADDRESS, [control, val]);
-  this.wire.writeBytes(control, function(err) {
-    this.wire.writeBytes(val, function(err) {
-      fn();
-    });
+  this.wire.writeBytes(control, [val], (err)=>{
+        if(err) console.log(err);
+        return;
   });
+
 }
 
 // read a byte from the oled
