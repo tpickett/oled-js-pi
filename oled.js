@@ -65,7 +65,6 @@ var Oled = function(opts) {
   };
 
   // Setup i2c
-  console.log('this.ADDRESS: ' + this.ADDRESS);
   this.wire = new i2c(this.ADDRESS, {device: '/dev/i2c-1'}); // point to your i2c address, debug provides REPL interface
 
   var screenSize = this.WIDTH + 'x' + this.HEIGHT;
@@ -93,14 +92,14 @@ Oled.prototype._initialise = function() {
     this.SET_VCOM_DETECT, 0x40, // vcom detect
     this.DISPLAY_ALL_ON_RESUME,
     this.NORMAL_DISPLAY,
-    this.DISPLAY_ON
+    // this.DISPLAY_ON
   ];
 
   var i, initSeqLen = initSeq.length;
 
   // write init seq commands
   for (i = 0; i < initSeqLen; i ++) {
-    this._transfer('cmd', initSeq[i], ()=>{});
+    this._transfer('cmd', initSeq[i]);
   }
 }
 
@@ -117,18 +116,27 @@ Oled.prototype._transfer = function(type, val, fn) {
 
   // send control and actual val
   // this.board.io.i2cWrite(this.ADDRESS, [control, val]);
+  //this.wire.writeBytes(control, function(err) {
+  //  this.wire.writeBytes(val, function(err) {
+  //    fn();
+  //  });
+  //});
   this.wire.writeBytes(control, [val], (err)=>{
-        if(err) console.log(err);
-        return;
+    	if(err) console.error("DANGER!!!----->",err.message);
+      if (typeof(fn) == "function") {	
+    		return fn();
+    	}
   });
-
 }
 
 // read a byte from the oled
 Oled.prototype._readI2C = function(fn) {
-  this.wire.readBytes(function(err, data) {
+  this.wire.readByte(function(err, data) {
+    if(err) console.error('reading error------------>', err.message)
     // result is single byte
-    fn(data);
+  	if (typeof(fn) == "function") {
+      return fn(data);
+    }
   });
 }
 
@@ -146,7 +154,6 @@ Oled.prototype._waitUntilReady = function(callback) {
         // if not busy, it's ready for callback
         callback();
       } else {
-        console.log('I\'m busy!');
         setTimeout(tick, 0);
       }
     });
@@ -423,7 +430,6 @@ Oled.prototype._updateDirtyBytes = function(byteArray) {
     this.dirtyBytes = [];
 
   } else {
-
     this._waitUntilReady(function() {
       // iterate through dirty bytes
       for (var i = 0; i < blen; i += 1) {
@@ -438,7 +444,6 @@ Oled.prototype._updateDirtyBytes = function(byteArray) {
         ];
 
         var displaySeqLen = displaySeq.length, v;
-
         // send intro seq
         for (v = 0; v < displaySeqLen; v += 1) {
           this._transfer('cmd', displaySeq[v]);
